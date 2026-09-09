@@ -2,7 +2,7 @@
 
 株式会社マンマルシステム向け業務日報管理システム。SharePoint Online リストをバックエンドに、Microsoft Entra ID 認証・GitHub Pages ホスティング・Teams タブ統合を組み合わせた業務 Web アプリです。
 
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-デプロイ済み-brightgreen?style=for-the-badge&logo=github)](https://joitaliano3a141592-art.github.io/manmarudairyreport/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-デプロイ済み-brightgreen?style=for-the-badge&logo=github)](https://manmaru-stack.github.io/manmarudairyreport/)
 [![Teams](https://img.shields.io/badge/Microsoft%20Teams-タブ対応-6264A7?style=for-the-badge&logo=microsoftteams&logoColor=white)](https://teams.microsoft.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
 
@@ -84,7 +84,7 @@ SharePoint サイト ID とリスト ID は設定値で切り替えます。現�
 ### ローカル開発
 
 ```bash
-git clone https://github.com/joitaliano3a141592-art/manmarudairyreport.git
+git clone https://github.com/manmaru-stack/manmarudairyreport.git
 cd manmarudairyreport
 npm install
 ```

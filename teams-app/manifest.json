@@ -5,9 +5,9 @@
   "id": "2d2b19d7-4c96-461a-982e-8331e11f67c4",
   "developer": {
     "name": "株式会社マンマルシステム",
-    "websiteUrl": "https://joitaliano3a141592-art.github.io/manmarudairyreport/",
-    "privacyUrl": "https://joitaliano3a141592-art.github.io/manmarudairyreport/",
-    "termsOfUseUrl": "https://joitaliano3a141592-art.github.io/manmarudairyreport/"
+    "websiteUrl": "https://manmaru-stack.github.io/manmarudairyreport/",
+    "privacyUrl": "https://manmaru-stack.github.io/manmarudairyreport/",
+    "termsOfUseUrl": "https://manmaru-stack.github.io/manmarudairyreport/"
   },
   "name": {
     "short": "業務日報",
@@ -26,14 +26,14 @@
     {
       "entityId": "dailyReport",
       "name": "業務日報",
-      "contentUrl": "https://joitaliano3a141592-art.github.io/manmarudairyreport/",
-      "websiteUrl": "https://joitaliano3a141592-art.github.io/manmarudairyreport/",
+      "contentUrl": "https://manmaru-stack.github.io/manmarudairyreport/",
+      "websiteUrl": "https://manmaru-stack.github.io/manmarudairyreport/",
       "scopes": ["personal"]
     }
   ],
   "configurableTabs": [
     {
-      "configurationUrl": "https://joitaliano3a141592-art.github.io/manmarudairyreport/teams-config",
+      "configurationUrl": "https://manmaru-stack.github.io/manmarudairyreport/teams-config",
       "canUpdateConfiguration": true,
       "scopes": ["team", "groupChat"]
     }
@@ -41,7 +41,7 @@
   "supportedChannelTypes": ["sharedChannels"],
   "permissions": ["identity", "messageTeamMembers"],
   "validDomains": [
-    "joitaliano3a141592-art.github.io",
+    "manmaru-stack.github.io",
     "login.microsoftonline.com"
   ]
 }
