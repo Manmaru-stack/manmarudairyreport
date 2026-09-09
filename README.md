@@ -173,14 +173,14 @@ dist/ を IIS の仮想ディレクトリへ配置。public/web.config で SPA �
 ### マニフェスト情報
 
 - バージョン: 1.0.6（スキーマ v1.17）
-- ファイル: 	eams-app/manifest.json
+- ファイル: `teams-app/manifest.json`
 - ZIP: `teams-app.zip`
 
 ### タブ種別
 
 | 種別 | スコープ | 備考 |
 |------|---------|------|
-| 設定可能タブ | 	eam, groupChat | 共有チャネル対応（supportedChannelTypes: ["sharedChannels"]） |
+| 設定可能タブ | `team`, `groupChat` | 共有チャネル対応（supportedChannelTypes: ["sharedChannels"]） |
 | 静的タブ | personal | 個人タブ |
 
 ### Teams タブ認証
@@ -249,39 +249,59 @@ python scripts/migrate_previous_year_data.py --year 2025 --dry-run
 
 ## リポジトリ構造
 
-`
+初めて触る人向けに、主要なディレクトリ・ファイルの役割をまとめます。
+
+```
 .
 ├── .github/
-│   ├── agents/
-│   │   ├── ManmaruDairyReport.agent.md  # 本アプリ専用エージェント
-│   │   ├── GeekSPApp.agent.md           # SP+MSAL汎用エージェント
-│   │   └── TeamsIntranetDeploy.agent.md # Teams/社内配信エージェント
-│   ├── skills/                          # GitHub Copilot スキル
+│   ├── agents/               # GitHub Copilot 用エージェント定義（保守運用の相談相手）
+│   ├── skills/                # GitHub Copilot スキル（Power Platform 関連の定型作業）
 │   └── workflows/
-│       └── deploy.yml                   # GitHub Pages 自動デプロイ
-├── docs/                                # アーキテクチャ・設計ドキュメント
-│   └── ARCHIVE_OPERATION_RUNBOOK.md     # 年次アーカイブ運用手順
-├── src/
-│   ├── components/                      # 共通 UI コンポーネント
-│   ├── hooks/                           # カスタムフック (use-sharepoint 等)
+│       └── deploy.yml         # main push で GitHub Pages へ自動デプロイ
+│
+├── docs/                      # 設計・運用ドキュメント（下記「詳細ドキュメント」参照）
+│
+├── src/                       # アプリ本体（React + TypeScript）
+│   ├── main.tsx / App.tsx     # エントリーポイント
+│   ├── router.tsx             # ルーティング定義（/dashboard, /daily-entry など）
+│   ├── pages/                 # 画面コンポーネント（1ファイル1ページ、_layout.tsx が共通レイアウト）
+│   ├── components/            # 共通 UI コンポーネント
+│   │   └── ui/                 # shadcn/ui ベースの部品（Button, Card, Table など）
+│   ├── hooks/
+│   │   └── use-sharepoint.ts  # SharePoint 各リストへの CRUD を React Query でラップ（アプリの中核）
 │   ├── lib/
-│   │   ├── graphClient.ts               # Graph API クライアント
-│   │   ├── msalConfig.ts                # MSAL 設定
-│   │   ├── sharepointConfig.ts          # SP サイト・リスト ID 設定
-│   │   └── reportStore.ts               # レポートストア
-│   ├── pages/                           # ページコンポーネント
-│   ├── providers/
-│   │   └── msal-provider.tsx            # MSAL 認証プロバイダー
-│   └── types/                           # TypeScript 型定義
-├── scripts/                             # Python 運用スクリプト
-├── teams-app/
-│   └── manifest.json                    # Teams アプリマニフェスト
-├── public/
-│   └── web.config                       # IIS 用 SPA ルーティング設定
-├── .env.production.server               # 社内サーバー用 env テンプレート
-├── vite.config.ts
+│   │   ├── graphClient.ts     # Graph API 呼び出しの共通処理（開発時はテストデータへ自動フォールバック）
+│   │   ├── mockData.ts        # ローカル開発用テストデータ（Graph API 接続不可時に使用）
+│   │   ├── sharepointConfig.ts # SharePoint サイト ID・リスト ID の設定
+│   │   ├── msalConfig.ts      # MSAL（Entra ID 認証）設定
+│   │   └── changelog.ts       # ダッシュボードの「お知らせ」に表示する更新履歴
+│   ├── providers/             # MSAL・React Query・テーマなどのコンテキストプロバイダー
+│   └── types/                 # TypeScript 型定義（SharePoint フィールド ⇔ アプリ内モデル）
+│
+├── plugins/                   # Vite 用の独自プラグイン（Graph API プロキシ等）
+├── scripts/                   # SharePoint/Power Platform 運用・移行用 Python スクリプト
+├── teams-app/                 # Teams アプリマニフェスト一式（manifest.json 等）
+├── public/                    # 静的アセット（web.config など、そのまま配信される）
+├── styles/                    # グローバル CSS
+│
+├── .env.example                # ローカル開発用の環境変数テンプレート
+├── .env.production.server      # 社内サーバー配信用の環境変数テンプレート
+├── vite.config.ts               # Vite 設定（base path、開発用プロキシ等）
 └── package.json
-`
+```
+
+### 詳細ドキュメント（docs/）
+
+| ファイル | 内容 |
+|----------|------|
+| [SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) | システム構成・認証フローの詳細 |
+| [SHAREPOINT_LIST_PLAN.md](./docs/SHAREPOINT_LIST_PLAN.md) | SharePoint リストの列構成 |
+| [ARCHIVE_OPERATION_RUNBOOK.md](./docs/ARCHIVE_OPERATION_RUNBOOK.md) | 年次アーカイブ運用手順 |
+| [SERVER_DEPLOY.md](./docs/SERVER_DEPLOY.md) | 社内サーバー（IIS 等）への配信手順 |
+| [CONNECTOR_REFERENCE.md](./docs/CONNECTOR_REFERENCE.md) | Power Platform コネクタ リファレンス |
+| [DATAVERSE_GUIDE.md](./docs/DATAVERSE_GUIDE.md) | Dataverse 利用ガイド |
+| [POWER_PLATFORM_DEVELOPMENT_STANDARD.md](./docs/POWER_PLATFORM_DEVELOPMENT_STANDARD.md) | Power Platform 開発標準 |
+| [ADVANCED_PATTERNS.md](./docs/ADVANCED_PATTERNS.md) | 応用実装パターン集 |
 
 ---
 
