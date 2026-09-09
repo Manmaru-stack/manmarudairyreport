@@ -47,6 +47,19 @@ const isTeamsAuthPopup =
 
 type TeamsContext = Awaited<ReturnType<typeof microsoftTeams.app.getContext>>;
 
+function withTimeout<T>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), milliseconds);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+    }
+  });
+}
+
 function setActiveAccount(account: AccountInfo | null | undefined): void {
   if (account) {
     msalInstance.setActiveAccount(account);
@@ -63,8 +76,14 @@ function getTeamsLoginHint(context: TeamsContext | null): string | undefined {
 
 async function detectTeamsContext(): Promise<TeamsContext | null> {
   try {
-    await microsoftTeams.app.initialize();
-    return await microsoftTeams.app.getContext();
+    return await withTimeout(
+      (async () => {
+        await microsoftTeams.app.initialize();
+        return await microsoftTeams.app.getContext();
+      })(),
+      5000,
+      "Teams context initialization timed out.",
+    );
   } catch (err) {
     console.warn("Teams context detection failed:", err);
     return null;
@@ -251,14 +270,22 @@ function AutoLogin({ children }: { children: ReactNode }) {
         void detectTeamsContext().then(async (teamsContext) => {
           if (isTeamsHostContext(teamsContext)) {
             try {
-              const silentRes = await acquireTeamsSsoResult(graphScopes, teamsContext);
+              const silentRes = await withTimeout(
+                acquireTeamsSsoResult(graphScopes, teamsContext),
+                5000,
+                "Teams SSO timed out.",
+              );
               if (!cancelled) {
                 setActiveAccount(silentRes.account);
               }
             } catch (err) {
               console.warn("Teams SSO failed, falling back to interactive auth:", err);
               try {
-                const interactiveRes = await acquireTeamsInteractiveResult(graphScopes);
+                const interactiveRes = await withTimeout(
+                  acquireTeamsInteractiveResult(graphScopes),
+                  30000,
+                  "Teams interactive authentication timed out.",
+                );
                 if (!cancelled) {
                   setActiveAccount(interactiveRes.account);
                 }
