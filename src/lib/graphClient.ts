@@ -6,9 +6,58 @@
  */
 import { SP_SITE_ID } from "./sharepointConfig";
 import { markTeamsSessionReady } from "./teamsAuthSession";
+import { getMockListItems, addMockListItem, updateMockListItem, deleteMockListItem } from "./mockData";
 
 const isDev = import.meta.env.DEV;
 const API_PREFIX = isDev ? "/api/graph" : "https://graph.microsoft.com/v1.0";
+
+// --------------- 開発用テストデータへのフォールバック ---------------
+//
+// ローカル開発時、Graph API トークン取得（Python スクリプト / Azure 認証情報）が
+// 未設定の場合は自動的にテストデータへフォールバックする。
+// VITE_USE_MOCK_DATA=true を設定すると、Graph API に接続できる環境でも強制的に
+// テストデータを使用できる。
+
+const forceMock = isDev && import.meta.env.VITE_USE_MOCK_DATA === "true";
+let graphAvailable: boolean | null = null;
+let hasLoggedMockFallback = false;
+
+function logMockFallbackOnce(reason: unknown) {
+  if (hasLoggedMockFallback) return;
+  hasLoggedMockFallback = true;
+  console.info(
+    "%c[開発モード] SharePoint(Graph API)に接続できないため、テストデータを表示します。",
+    "color:#2563eb;font-weight:bold;",
+    reason,
+  );
+}
+
+function isGraphUnavailableError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes("Graph API 503") ||
+    error.message.includes("Failed to fetch") ||
+    error.message.includes("NetworkError")
+  );
+}
+
+async function withMockFallback<T>(real: () => Promise<T>, mock: () => T): Promise<T> {
+  if (forceMock || (isDev && graphAvailable === false)) {
+    return mock();
+  }
+  try {
+    const result = await real();
+    if (isDev) graphAvailable = true;
+    return result;
+  } catch (error) {
+    if (isDev && isGraphUnavailableError(error)) {
+      graphAvailable = false;
+      logMockFallbackOnce(error);
+      return mock();
+    }
+    throw error;
+  }
+}
 
 // --------------- 汎用 fetch ---------------
 
@@ -95,39 +144,57 @@ function listItemPath(listId: string, itemId: string): string {
 type ListItem<F> = { id: string; fields: F; createdByName?: string; createdDateTime?: string };
 
 export async function fetchListItems<F>(listId: string, query = ""): Promise<ListItem<F>[]> {
-  const all: ListItem<F>[] = [];
-  let url: string | undefined = listItemsPath(listId, query);
+  return withMockFallback(
+    async () => {
+      const all: ListItem<F>[] = [];
+      let url: string | undefined = listItemsPath(listId, query);
 
-  while (url) {
-    const data: GraphListItems<F> = await graphGet(url);
-    for (const item of data.value) {
-      all.push({
-        id: item.id,
-        fields: item.fields,
-        createdByName: item.createdBy?.user?.displayName,
-        createdDateTime: item.createdDateTime,
-      });
-    }
-    const next: string | undefined = data["@odata.nextLink"];
-    if (next) {
-      url = next.replace("https://graph.microsoft.com/v1.0", "");
-    } else {
-      url = undefined;
-    }
-  }
-  return all;
+      while (url) {
+        const data: GraphListItems<F> = await graphGet(url);
+        for (const item of data.value) {
+          all.push({
+            id: item.id,
+            fields: item.fields,
+            createdByName: item.createdBy?.user?.displayName,
+            createdDateTime: item.createdDateTime,
+          });
+        }
+        const next: string | undefined = data["@odata.nextLink"];
+        if (next) {
+          url = next.replace("https://graph.microsoft.com/v1.0", "");
+        } else {
+          url = undefined;
+        }
+      }
+      return all;
+    },
+    () => getMockListItems<F>(listId),
+  );
 }
 
 export async function createListItem<F>(listId: string, fields: Record<string, unknown>): Promise<{ id: string; fields: F }> {
-  return graphPost(`/sites/${encodeGraphPathSegment(SP_SITE_ID)}/lists/${encodeGraphPathSegment(listId)}/items`, { fields });
+  return withMockFallback(
+    () => graphPost(`/sites/${encodeGraphPathSegment(SP_SITE_ID)}/lists/${encodeGraphPathSegment(listId)}/items`, { fields }),
+    () => addMockListItem<F>(listId, fields),
+  );
 }
 
 export async function updateListItem(listId: string, itemId: string, fields: Record<string, unknown>): Promise<void> {
-  await graphPatch(`${listItemPath(listId, itemId)}/fields`, fields);
+  await withMockFallback(
+    async () => {
+      await graphPatch(`${listItemPath(listId, itemId)}/fields`, fields);
+    },
+    () => updateMockListItem(listId, itemId, fields),
+  );
 }
 
 export async function deleteListItem(listId: string, itemId: string): Promise<void> {
-  await graphDelete(listItemPath(listId, itemId));
+  await withMockFallback(
+    async () => {
+      await graphDelete(listItemPath(listId, itemId));
+    },
+    () => deleteMockListItem(listId, itemId),
+  );
 }
 
 // --------------- Teams channel message ---------------
@@ -137,11 +204,18 @@ export async function postTeamsChannelMessage(
   channelId: string,
   htmlBody: string,
 ): Promise<void> {
-  const path = `/teams/${teamId}/channels/${channelId}/messages`;
-  const body = { body: { contentType: "html", content: htmlBody } };
-  const res = await graphFetch(path, {
-    method: "POST",
-    body: JSON.stringify(body),
-  }, true); // useTeamsScope=true → ChannelMessage.Send トークンを使用
-  await res.json().catch(() => {});
+  await withMockFallback(
+    async () => {
+      const path = `/teams/${teamId}/channels/${channelId}/messages`;
+      const body = { body: { contentType: "html", content: htmlBody } };
+      const res = await graphFetch(path, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }, true); // useTeamsScope=true → ChannelMessage.Send トークンを使用
+      await res.json().catch(() => {});
+    },
+    () => {
+      console.info("%c[開発モード] Teams通知（モック・実際には送信されません）", "color:#2563eb;font-weight:bold;", htmlBody);
+    },
+  );
 }

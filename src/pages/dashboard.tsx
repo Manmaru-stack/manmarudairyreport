@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DataErrorState } from "@/components/data-error-state";
+import { AnnouncementsCard } from "@/components/announcements-card";
 import { Download, ChevronDown, ChevronUp, Medal, ExternalLink } from "lucide-react";
 import { useCustomers, useReports, useWorkNumbers } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
@@ -1116,6 +1117,10 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <AnnouncementsCard />
+      </div>
     </div>
   );
 }
