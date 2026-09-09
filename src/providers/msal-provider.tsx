@@ -357,12 +357,18 @@ function DevPassthrough({ children }: { children: ReactNode }) {
 }
 
 const isDev = import.meta.env.DEV;
+const isTeamsConfigPage = window.location.pathname.endsWith("/teams-config");
 
 export function MsalAuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isTeamsConfigPage) {
+      setReady(true);
+      return;
+    }
+
     if (isDev) {
       setReady(true);
       return;
@@ -449,6 +455,10 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
 
   if (isDev) {
     return <DevPassthrough>{children}</DevPassthrough>;
+  }
+
+  if (isTeamsConfigPage) {
+    return <>{children}</>;
   }
 
   return (
