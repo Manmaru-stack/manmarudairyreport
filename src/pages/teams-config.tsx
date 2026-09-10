@@ -38,7 +38,7 @@ export default function TeamsConfigPage() {
 
       microsoftTeams.pages.config.setConfig({
         entityId: page.id,
-        contentUrl: `${baseUrl}${page.id}`,
+        contentUrl: new URL(`${page.id}/`, baseUrl).toString(),
         suggestedDisplayName: page.label,
         websiteUrl: baseUrl,
       });
