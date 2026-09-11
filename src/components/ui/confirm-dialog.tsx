@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +18,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   variant?: "default" | "destructive"
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   onCancel?: () => void
 }
 
@@ -32,9 +33,17 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const handleConfirm = () => {
-    onConfirm()
-    onOpenChange(false)
+  const [confirming, setConfirming] = useState(false)
+
+  const handleConfirm = async () => {
+    if (confirming) return
+    setConfirming(true)
+    try {
+      await onConfirm()
+      onOpenChange(false)
+    } finally {
+      setConfirming(false)
+    }
   }
 
   const handleCancel = () => {
@@ -54,7 +63,10 @@ export function ConfirmDialog({
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
+            onClick={() => {
+              void handleConfirm()
+            }}
+            disabled={confirming}
             className={
               variant === "destructive"
                 ? "bg-destructive text-white hover:bg-destructive/90"

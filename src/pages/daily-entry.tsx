@@ -105,7 +105,7 @@ type ReportTableRow = {
   rowKey: string;
   source: "report" | "today-plan";
   sourceId: string;
-  displayType: "予定" | "予定外";
+  displayType: "予定内" | "予定外";
   reportDate: string;
   customerId: string;
   customerName: string;
@@ -430,6 +430,10 @@ export default function DailyEntryPage() {
     () => (nextPlanDate ? plans.filter((plan) => plan.planDate === nextPlanDate) : []),
     [nextPlanDate, plans],
   );
+  const nextPlanTotalHours = useMemo(
+    () => publishPlans.reduce((sum, plan) => sum + plan.plannedHours, 0),
+    [publishPlans],
+  );
   const reportTableRows = useMemo<ReportTableRow[]>(() => {
     const buildKey = (parts: Array<string | null | undefined>) => parts.map((part) => (part == null ? "__missing__" : part)).join("|");
     const buildPlanMatchKey = (
@@ -493,7 +497,7 @@ export default function DailyEntryPage() {
       rowKey: `report-${report.id}`,
       source: "report",
       sourceId: report.id,
-      displayType: matchedReportIds.has(report.id) && report.plannedHours > 0 ? "予定" : "予定外",
+      displayType: matchedReportIds.has(report.id) ? "予定内" : "予定外",
       reportDate: report.reportDate,
       customerId: report.customerId,
       customerName: report.customerName,
@@ -513,7 +517,7 @@ export default function DailyEntryPage() {
       rowKey: `today-plan-${plan.id}`,
       source: "today-plan",
       sourceId: plan.id,
-      displayType: "予定",
+      displayType: "予定内",
       reportDate: plan.planDate,
       customerId: plan.customerId,
       customerName: plan.customerName,
@@ -966,12 +970,13 @@ export default function DailyEntryPage() {
         workTypeName: string;
         workDescription: string;
         workHours: number;
-        displayType: "予定" | "予定外";
+        displayType: "予定内" | "予定外";
+        achievement: Achievement;
       }) => (
         `<p>(${escapeHtml(report.displayType)})【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
-        + `${escapeHtml(normalizeInlineText(report.systemName) || "未設定")}　`
-        + `${escapeHtml(buildWorkSummary(report.workTypeName, report.workDescription) || "（内容未設定）")}　`
-        + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h</p>`
+        + `${escapeHtml(normalizeInlineText(report.systemName) || "未設定")} `
+        + `${escapeHtml(buildWorkSummary(report.workTypeName, report.workDescription) || "（内容未設定）")} `
+        + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h 達成度 ${escapeHtml(report.achievement ?? "―")}</p>`
       );
       const resolveTeamsCustomerName = (customerId: string, customerName: string) => (
         customerNameMap.get(customerId)
@@ -1004,7 +1009,7 @@ export default function DailyEntryPage() {
       const buildCustomerLines = (items: Array<{ customerId: string; customerName: string; systemName: string; workTypeName: string; workDescription: string }>) => {
         return [...items]
           .sort(comparePublishItems)
-          .map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(normalizeInlineText(item.systemName) || "未設定")}　${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription) || "（内容未設定）")}</p>`)
+          .map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(normalizeInlineText(item.systemName) || "未設定")} ${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription) || "（内容未設定）")}</p>`)
           .join("");
       };
       const totalReportWorkHours = reports.reduce((sum, report) => sum + report.workHours, 0);
@@ -1021,12 +1026,13 @@ export default function DailyEntryPage() {
           workDescription: report.workDescription,
           workHours: report.workHours,
           displayType: report.displayType,
+          achievement: report.achievement,
         });
       })
       .join("") || "<p>（なし）</p>"}`).join("<br/>");
       const nextPlanSection = nextPlanDate
         ? `
-    <p>■ 次回の作業予定（${formatMonthDay(nextPlanDate)}）</p>
+    <p>■ 次回の作業予定（${formatMonthDay(nextPlanDate)}） 合計 ${escapeHtml(formatWorkHours(nextPlanTotalHours))}h</p>
     ${publishPlans.length > 0 ? buildCustomerLines(publishPlans) : "<p>（なし）</p>"}`
         : "<p>■ 次回の作業予定</p><p>（なし）</p>";
       const note = workDayForm.todayNote.trim() || currentWorkDay?.todayNote?.trim() || "";
@@ -1095,7 +1101,7 @@ export default function DailyEntryPage() {
         <Card className="min-w-0">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>本日の実績</CardTitle>
+              <CardTitle>本日の報告実績</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">合計: {formatWorkHours(totalWorkHours)}h</div>
                 <Button size="sm" onClick={openNewReportModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
@@ -1113,7 +1119,7 @@ export default function DailyEntryPage() {
                 <TableHeader className="bg-slate-200 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>種別</TableHead>
-                    <TableHead>報告日</TableHead>
+                    <TableHead>実績日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
                     <TableHead>工事番号</TableHead>
@@ -1145,7 +1151,7 @@ export default function DailyEntryPage() {
                         <TableCell className="whitespace-nowrap">
                           <span
                             className={row.source === "report"
-                              ? row.displayType === "予定"
+                              ? row.displayType === "予定内"
                                ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-sky-900 dark:bg-sky-950 dark:text-slate-100"
                                : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-amber-900 dark:bg-amber-950 dark:text-slate-100"
                               : "inline-flex items-center rounded-full border border-sky-300 bg-transparent px-3 py-1 text-xs font-bold text-sky-700 dark:border-sky-800 dark:text-sky-300"}
@@ -1280,7 +1286,7 @@ export default function DailyEntryPage() {
             <div className="flex items-center justify-between gap-4">
               <CardTitle>次回の予定</CardTitle>
               <div className="flex items-center gap-3">
-                <div className="text-sm font-medium">次回: {nextPlanDate ?? "-"}</div>
+                <div className="text-sm font-medium">次回: {nextPlanDate ?? "-"} 合計: {formatWorkHours(nextPlanTotalHours)}h</div>
                 <Button size="sm" onClick={openNewPlanModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
                   <Plus className="mr-2 h-4 w-4" />予定追加
                 </Button>
@@ -1748,7 +1754,7 @@ export default function DailyEntryPage() {
         confirmLabel={publishing ? "送信中..." : "発報する"}
         cancelLabel="キャンセル"
         onConfirm={() => {
-          void handlePublish();
+          return handlePublish();
         }}
       />
 
@@ -1762,9 +1768,9 @@ export default function DailyEntryPage() {
         confirmLabel={deleteReportMutation.isPending ? "削除中..." : "削除する"}
         cancelLabel="キャンセル"
         variant="destructive"
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!reportDeleteTargetId) return;
-          deleteReportMutation.mutate(reportDeleteTargetId);
+          await deleteReportMutation.mutateAsync(reportDeleteTargetId);
           setReportDeleteTargetId(null);
         }}
       />
@@ -1779,9 +1785,9 @@ export default function DailyEntryPage() {
         confirmLabel={deletePlanMutation.isPending ? "削除中..." : "削除する"}
         cancelLabel="キャンセル"
         variant="destructive"
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!planDeleteTargetId) return;
-          deletePlanMutation.mutate(planDeleteTargetId);
+          await deletePlanMutation.mutateAsync(planDeleteTargetId);
           setPlanDeleteTargetId(null);
         }}
       />

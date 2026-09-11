@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 // 新しいバージョンをリリースしたら、配列の先頭に追記してください。
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: "1.0.14",
+    date: "2026-09-11",
+    items: [
+      "日次入力の実績区分を「予定内／予定外」に変更し、0時間の予定も正しく予定内として判定",
+      "次回予定の合計時間と、Teams発報時の達成度を表示",
+      "実績日への項目名変更と、削除処理の安定性を改善",
+    ],
+  },
+  {
     version: "1.0.13",
     date: "2026-09-09",
     items: [

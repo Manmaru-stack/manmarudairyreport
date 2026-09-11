@@ -505,9 +505,9 @@ export default function WorkReportListPage() {
         confirmLabel={deleteMutation.isPending ? "削除中..." : "削除する"}
         cancelLabel="キャンセル"
         variant="destructive"
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!deleteTargetId) return;
-          deleteMutation.mutate(deleteTargetId);
+          await deleteMutation.mutateAsync(deleteTargetId);
           setDeleteTargetId(null);
         }}
       />
