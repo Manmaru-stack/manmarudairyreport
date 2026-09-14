@@ -204,7 +204,11 @@ export default function DashboardPage() {
     [wikipediaDayTitle, wikipediaSummary],
   );
   const workNumberNameMap = useMemo(
-    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.displayName])),
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.workNumberName || workNumber.displayName])),
+    [workNumbers],
+  );
+  const workNumberCodeMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.workNumber])),
     [workNumbers],
   );
 
@@ -217,6 +221,9 @@ export default function DashboardPage() {
   };
   const resolveWorkNumberTableDisplayName = (report: WorkReport): string => {
     return workNumberNameMap.get(report.workNumberId) || report.workNumber || "―";
+  };
+  const resolveWorkNumberTableCode = (report: WorkReport): string => {
+    return workNumberCodeMap.get(report.workNumberId) || report.workNumber || "―";
   };
   const resolveCustomerTableDisplayName = (report: WorkReport): string => {
     return customerNameMap.get(report.customerId) || report.customerName || "(未設定)";
@@ -627,12 +634,13 @@ export default function DashboardPage() {
   };
 
   const downloadCsv = () => {
-    const headers = ["報告日", "ユーザー", "顧客", "システム", "工番", "作業内容", "区分", "作業時間"];
+    const headers = ["報告日", "ユーザー", "顧客", "システム", "工番", "工番名", "作業内容", "区分", "作業時間"];
     const rows = filteredReports.map((report: WorkReport) => [
       report.reportDate,
       report.userName,
       resolveCustomerCsvDisplayName(report),
       resolveSystemAggregationName(report),
+      resolveWorkNumberTableCode(report),
       resolveWorkNumberTableDisplayName(report),
       report.workDescription,
       report.workTypeName,
@@ -1096,6 +1104,7 @@ export default function DashboardPage() {
                   <TableHead>顧客</TableHead>
                   <TableHead>システム</TableHead>
                   <TableHead>工番</TableHead>
+                  <TableHead>工番名</TableHead>
                   <TableHead>作業内容</TableHead>
                   <TableHead>区分</TableHead>
                   <TableHead>時間</TableHead>
@@ -1109,6 +1118,7 @@ export default function DashboardPage() {
                     <TableCell>{report.userName}</TableCell>
                     <TableCell>{resolveCustomerTableDisplayName(report)}</TableCell>
                     <TableCell>{resolveSystemTableDisplayName(report)}</TableCell>
+                    <TableCell>{resolveWorkNumberTableCode(report)}</TableCell>
                     <TableCell>{resolveWorkNumberTableDisplayName(report)}</TableCell>
                     <TableCell className="max-w-xs truncate" title={report.workDescription}>
                       {report.workDescription}
