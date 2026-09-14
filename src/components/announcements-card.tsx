@@ -30,7 +30,7 @@ export function AnnouncementsCard() {
     }
   };
 
-  const [latestEntry, ...previousEntries] = changelogEntries;
+  const latestEntry = changelogEntries[0];
 
   return (
     <Card className="mb-6 gap-0 overflow-hidden py-0">
@@ -88,28 +88,6 @@ export function AnnouncementsCard() {
                   ))}
                 </ul>
               </div>
-            )}
-            {previousEntries.length > 0 && (
-              <details className="group">
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground select-none">
-                  過去のお知らせを表示
-                </summary>
-                <div className="mt-3 space-y-4 border-t border-border pt-3">
-                  {previousEntries.map((entry) => (
-                    <div key={entry.version}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">Ver {entry.version}</span>
-                        <span className="text-xs text-muted-foreground">{entry.date}</span>
-                      </div>
-                      <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
-                        {entry.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </details>
             )}
           </div>
         </CardContent>
