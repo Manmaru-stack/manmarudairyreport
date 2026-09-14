@@ -30,7 +30,7 @@ export function AnnouncementsCard() {
     }
   };
 
-  const latestEntry = changelogEntries[0];
+  const [latestEntry, ...previousEntries] = changelogEntries;
 
   return (
     <Card className="mb-6 gap-0 overflow-hidden py-0">
@@ -69,8 +69,14 @@ export function AnnouncementsCard() {
       </CardHeader>
       {!isOpen && latestEntry && (
         <CardContent className="px-2 pb-2 pt-0 text-xs text-muted-foreground">
-          Ver {latestEntry.version}（{latestEntry.date}）: {latestEntry.items[0]}
-          {latestEntry.items.length > 1 ? ` 他${latestEntry.items.length - 1}件` : ""}
+          <div>
+            Ver {latestEntry.version}（{latestEntry.date}）
+          </div>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {latestEntry.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </CardContent>
       )}
       {isOpen && (
@@ -89,6 +95,19 @@ export function AnnouncementsCard() {
                 </ul>
               </div>
             )}
+            {previousEntries.map((entry) => (
+              <div key={entry.version} className="border-t border-border pt-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Ver {entry.version}</span>
+                  <span className="text-xs text-muted-foreground">{entry.date}</span>
+                </div>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
+                  {entry.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </CardContent>
       )}
