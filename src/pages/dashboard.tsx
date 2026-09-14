@@ -215,6 +215,9 @@ export default function DashboardPage() {
   const resolveSystemTableDisplayName = (report: WorkReport): string => {
     return report.systemName || workNumberNameMap.get(report.workNumberId) || report.workNumber || "(未設定)";
   };
+  const resolveWorkNumberTableDisplayName = (report: WorkReport): string => {
+    return workNumberNameMap.get(report.workNumberId) || report.workNumber || "―";
+  };
   const resolveCustomerTableDisplayName = (report: WorkReport): string => {
     return customerNameMap.get(report.customerId) || report.customerName || "(未設定)";
   };
@@ -624,12 +627,13 @@ export default function DashboardPage() {
   };
 
   const downloadCsv = () => {
-    const headers = ["報告日", "ユーザー", "顧客", "システム", "作業内容", "区分", "作業時間"];
+    const headers = ["報告日", "ユーザー", "顧客", "システム", "工番", "作業内容", "区分", "作業時間"];
     const rows = filteredReports.map((report: WorkReport) => [
       report.reportDate,
       report.userName,
       resolveCustomerCsvDisplayName(report),
       resolveSystemAggregationName(report),
+      resolveWorkNumberTableDisplayName(report),
       report.workDescription,
       report.workTypeName,
       report.workHours,
@@ -1091,6 +1095,7 @@ export default function DashboardPage() {
                   <TableHead>ユーザー</TableHead>
                   <TableHead>顧客</TableHead>
                   <TableHead>システム</TableHead>
+                  <TableHead>工番</TableHead>
                   <TableHead>作業内容</TableHead>
                   <TableHead>区分</TableHead>
                   <TableHead>時間</TableHead>
@@ -1104,6 +1109,7 @@ export default function DashboardPage() {
                     <TableCell>{report.userName}</TableCell>
                     <TableCell>{resolveCustomerTableDisplayName(report)}</TableCell>
                     <TableCell>{resolveSystemTableDisplayName(report)}</TableCell>
+                    <TableCell>{resolveWorkNumberTableDisplayName(report)}</TableCell>
                     <TableCell className="max-w-xs truncate" title={report.workDescription}>
                       {report.workDescription}
                     </TableCell>

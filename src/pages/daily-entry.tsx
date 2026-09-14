@@ -105,7 +105,7 @@ type ReportTableRow = {
   rowKey: string;
   source: "report" | "today-plan";
   sourceId: string;
-  displayType: "予定内" | "予定外";
+  displayType: "予定" | "予定内" | "予定外";
   reportDate: string;
   customerId: string;
   customerName: string;
@@ -517,7 +517,7 @@ export default function DailyEntryPage() {
       rowKey: `today-plan-${plan.id}`,
       source: "today-plan",
       sourceId: plan.id,
-      displayType: "予定内",
+      displayType: "予定",
       reportDate: plan.planDate,
       customerId: plan.customerId,
       customerName: plan.customerName,
@@ -861,6 +861,7 @@ export default function DailyEntryPage() {
   };
 
   const openEditReportModal = (row: ReportTableRow) => {
+    const isUnregisteredPlanRow = row.source === "today-plan";
     setReportEditingId(row.source === "report" ? row.sourceId : null);
     setReportForm({
       reportDate: row.reportDate,
@@ -870,7 +871,7 @@ export default function DailyEntryPage() {
       workTypeId: row.workTypeId,
       workDescription: row.workDescription,
       plannedHours: String(row.plannedHours ?? 0),
-      workTime: String(row.workHours ?? 0),
+      workTime: isUnregisteredPlanRow ? String(row.plannedHours ?? 0) : String(row.workHours ?? 0),
       isProject: row.isProject,
       achievement: row.achievement,
     });
@@ -970,7 +971,7 @@ export default function DailyEntryPage() {
         workTypeName: string;
         workDescription: string;
         workHours: number;
-        displayType: "予定内" | "予定外";
+        displayType: "予定" | "予定内" | "予定外";
         achievement: Achievement;
       }) => (
         `<p>(${escapeHtml(report.displayType)})【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
@@ -1148,15 +1149,15 @@ export default function DailyEntryPage() {
                         }}
                         className={!isEditing ? "cursor-pointer" : undefined}
                       >
-                        <TableCell className="whitespace-nowrap">
+                                        <TableCell className="whitespace-nowrap">
                           <span
                             className={row.source === "report"
                               ? row.displayType === "予定内"
-                               ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-sky-900 dark:bg-sky-950 dark:text-slate-100"
-                               : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-amber-900 dark:bg-amber-950 dark:text-slate-100"
+                                ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-sky-900 dark:bg-sky-950 dark:text-slate-100"
+                                : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-amber-900 dark:bg-amber-950 dark:text-slate-100"
                               : "inline-flex items-center rounded-full border border-sky-300 bg-transparent px-3 py-1 text-xs font-bold text-sky-700 dark:border-sky-800 dark:text-sky-300"}
                           >
-                             {row.displayType}
+                            {row.displayType}
                           </span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
