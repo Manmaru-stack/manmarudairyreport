@@ -7,6 +7,36 @@ import { changelogEntries, latestChangelogVersion } from "@/lib/changelog";
 
 const LAST_SEEN_VERSION_KEY = "announcements-last-seen-version";
 
+function renderChangelogItem(item: string, index: number) {
+  const urlPattern = /(https?:\/\/[^\s)]+)/g;
+  const parts = item.split(urlPattern);
+
+  if (parts.length === 1) {
+    return <li key={`${item}-${index}`}>{item}</li>;
+  }
+
+  return (
+    <li key={`${item}-${index}`}>
+      {parts.map((part, partIndex) => {
+        if (/^https?:\/\//.test(part)) {
+          return (
+            <a
+              key={`${part}-${partIndex}`}
+              href={part}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline underline-offset-2"
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={`${part}-${partIndex}`}>{part}</span>;
+      })}
+    </li>
+  );
+}
+
 export function AnnouncementsCard() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
@@ -73,9 +103,7 @@ export function AnnouncementsCard() {
             Ver {latestEntry.version}（{latestEntry.date}）
           </div>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            {latestEntry.items.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
+            {latestEntry.items.map((item, index) => renderChangelogItem(item, index))}
           </ul>
         </CardContent>
       )}
@@ -89,9 +117,7 @@ export function AnnouncementsCard() {
                   <span className="text-xs text-muted-foreground">{latestEntry.date}</span>
                 </div>
                 <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
-                  {latestEntry.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
+                  {latestEntry.items.map((item, index) => renderChangelogItem(item, index))}
                 </ul>
               </div>
             )}
@@ -102,9 +128,7 @@ export function AnnouncementsCard() {
                   <span className="text-xs text-muted-foreground">{entry.date}</span>
                 </div>
                 <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
-                  {entry.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
+                  {entry.items.map((item, index) => renderChangelogItem(item, index))}
                 </ul>
               </div>
             ))}

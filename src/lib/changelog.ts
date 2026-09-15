@@ -7,6 +7,13 @@ export type ChangelogEntry = {
 // 新しいバージョンをリリースしたら、配列の先頭に追記してください。
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: "1.0.16",
+    date: "2026-09-15",
+    items: [
+      "土日祝または平日の7.5h超過分を残業として集計（参考 日本の祝日API: https://holidays-jp.github.io/ ）",
+    ],
+  },
+  {
     version: "1.0.15",
     date: "2026-09-14",
     items: [

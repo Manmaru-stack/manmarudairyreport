@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { DataErrorState } from "@/components/data-error-state";
 import { AnnouncementsCard } from "@/components/announcements-card";
-import { Download, ChevronDown, ChevronUp, Medal, ExternalLink } from "lucide-react";
+import { Download, ChevronDown, ChevronUp, Medal } from "lucide-react";
 import { useCustomers, useReports, useWorkNumbers } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
 import { formatWorkHours } from "@/lib/utils";
@@ -76,91 +76,9 @@ function buildPieSlicePath(startAngle: number, endAngle: number) {
   ].join(" ");
 }
 
-function getWikipediaDayTitle(date: Date) {
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
-}
-
-function getWikipediaPageUrl(date: Date) {
-  return `https://ja.wikipedia.org/wiki/${encodeURIComponent(getWikipediaDayTitle(date))}`;
-}
-
-function getWikipediaSectionListApiUrl(date: Date) {
-  const title = getWikipediaDayTitle(date);
-  return `https://ja.wikipedia.org/w/api.php?action=parse&format=json&prop=sections&redirects=1&origin=*&page=${encodeURIComponent(title)}`;
-}
-
-function getWikipediaSectionTextApiUrl(date: Date, sectionIndex: string) {
-  const title = getWikipediaDayTitle(date);
-  return `https://ja.wikipedia.org/w/api.php?action=parse&format=json&prop=text&redirects=1&origin=*&page=${encodeURIComponent(title)}&section=${encodeURIComponent(sectionIndex)}`;
-}
-
-function buildWikipediaAiOverview(dateTitle: string, summary: string | null) {
-  if (!summary) {
-    return `${dateTitle}の出来事を要約できませんでした。詳しい内容については、${dateTitle} - Wikipedia をご覧ください。`;
-  }
-
-  const cleaned = summary.replace(/\s+/g, " ").trim();
-  return `${cleaned}\n\n詳しい内容については、${dateTitle} - Wikipedia をご覧ください。`;
-}
-
-function normalizeSectionTitle(title: string) {
-  return title.replace(/\s+/g, "").replace(/（.*?）/g, "");
-}
-
-function normalizeLabelText(text: string) {
-  return text
-    .replace(/\s+/g, " ")
-    .replace(/\s*[（(].*?[)）]\s*$/, "")
-    .trim();
-}
-
-function extractSectionBullets(sectionHtml: string) {
-  const parser = new DOMParser();
-  const document = parser.parseFromString(sectionHtml, "text/html");
-  return Array.from(document.querySelectorAll("li"))
-    .map((item) => item.textContent?.replace(/\s+/g, " ").trim() ?? "")
-    .filter(Boolean)
-    .slice(0, 3);
-}
-
-function selectJapaneseCommemorativeLabel(items: string[]) {
-  const preferredRaw = items.find((item) => {
-    return (item.includes("日本の旗") || item.includes("日本")) && !item.includes("英語版");
-  });
-  if (preferredRaw) {
-    return normalizeLabelText(preferredRaw);
-  }
-
-  const commemorativeRaw = items.find((item) => /の日/.test(item) && !item.includes("英語版"));
-  if (commemorativeRaw) {
-    return normalizeLabelText(commemorativeRaw);
-  }
-
-  const normalizedItems = items.map(normalizeLabelText).filter(Boolean);
-  return normalizedItems[0] ?? null;
-}
-
-function extractEventSummaryFromSectionHtml(sectionHtml: string) {
-  const items = extractSectionBullets(sectionHtml);
-
-  if (items.length > 0) {
-    return {
-      highlight: items[0],
-      summary: `主な出来事として、${items.join("、")}などがあります。`,
-    };
-  }
-
-  const text = document.body.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  return text
-    ? {
-        highlight: null,
-        summary: text,
-      }
-    : null;
-}
+const OVERTIME_DAILY_THRESHOLD_HOURS = 7.5;
 
 export default function DashboardPage() {
-  const today = useMemo(() => new Date(), []);
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
     return toLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -174,10 +92,6 @@ export default function DashboardPage() {
   const [barTooltip, setBarTooltip] = useState<BarTooltipState | null>(null);
   const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
   const [activeDatePreset, setActiveDatePreset] = useState<DatePreset | null>("thisMonth");
-  const [wikipediaSummary, setWikipediaSummary] = useState<string | null>(null);
-  const [wikipediaHighlight, setWikipediaHighlight] = useState<string | null>(null);
-  const [wikipediaLoading, setWikipediaLoading] = useState(true);
-  const [wikipediaError, setWikipediaError] = useState<string | null>(null);
 
   const { data: customers = [] } = useCustomers();
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
@@ -195,13 +109,6 @@ export default function DashboardPage() {
   const customerNameMap = useMemo(
     () => new Map(customers.map((customer) => [customer.id, customer.name])),
     [customers],
-  );
-  const wikipediaDayTitle = useMemo(() => getWikipediaDayTitle(today), [today]);
-  const wikipediaPageUrl = useMemo(() => getWikipediaPageUrl(today), [today]);
-  const wikipediaSectionListApiUrl = useMemo(() => getWikipediaSectionListApiUrl(today), [today]);
-  const wikipediaAiOverview = useMemo(
-    () => buildWikipediaAiOverview(wikipediaDayTitle, wikipediaSummary),
-    [wikipediaDayTitle, wikipediaSummary],
   );
   const workNumberNameMap = useMemo(
     () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.workNumberName || workNumber.displayName])),
@@ -242,88 +149,6 @@ export default function DashboardPage() {
     const suffix = fallback.slice(separatorIndex + 1).trim();
     return /^\d+$/.test(prefix) && suffix ? suffix : fallback;
   };
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const loadWikipediaSummary = async () => {
-      setWikipediaLoading(true);
-      setWikipediaError(null);
-      try {
-        const sectionsResponse = await fetch(wikipediaSectionListApiUrl, { signal: controller.signal });
-        if (!sectionsResponse.ok) {
-          throw new Error(`Wikipedia API request failed with ${sectionsResponse.status}`);
-        }
-
-        const sectionsData = (await sectionsResponse.json()) as {
-          parse?: {
-            sections?: Array<{ index: string; line: string }>;
-          };
-        };
-
-        const eventSection = sectionsData.parse?.sections?.find((section) => {
-          const title = normalizeSectionTitle(section.line);
-          return title.includes("できごと") || title.includes("出来事") || title.includes("主な出来事");
-        });
-        const commemorativeSection = sectionsData.parse?.sections?.find((section) => {
-          const title = normalizeSectionTitle(section.line);
-          return title.includes("記念日") || title.includes("年中行事");
-        });
-
-        if (!eventSection) {
-          throw new Error("Event section not found");
-        }
-
-        let nextHighlight: string | null = null;
-        if (commemorativeSection) {
-          const commemorativeResponse = await fetch(
-            getWikipediaSectionTextApiUrl(today, commemorativeSection.index),
-            { signal: controller.signal },
-          );
-          if (commemorativeResponse.ok) {
-            const commemorativeData = (await commemorativeResponse.json()) as {
-              parse?: {
-                text?: { "*": string };
-              };
-            };
-            const commemorativeHtml = commemorativeData.parse?.text?.["*"] ?? "";
-            nextHighlight = selectJapaneseCommemorativeLabel(extractSectionBullets(commemorativeHtml));
-          }
-        }
-
-        const sectionResponse = await fetch(getWikipediaSectionTextApiUrl(today, eventSection.index), {
-          signal: controller.signal,
-        });
-        if (!sectionResponse.ok) {
-          throw new Error(`Wikipedia section request failed with ${sectionResponse.status}`);
-        }
-
-        const sectionData = (await sectionResponse.json()) as {
-          parse?: {
-            text?: { "*": string };
-          };
-        };
-
-        const sectionHtml = sectionData.parse?.text?.["*"] ?? "";
-        const result = extractEventSummaryFromSectionHtml(sectionHtml);
-        setWikipediaSummary(result?.summary ?? null);
-        setWikipediaHighlight(nextHighlight ?? result?.highlight ?? null);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setWikipediaError(error instanceof Error ? error.message : "Wikipedia API request failed");
-          setWikipediaSummary(null);
-          setWikipediaHighlight(null);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setWikipediaLoading(false);
-        }
-      }
-    };
-
-    void loadWikipediaSummary();
-    return () => controller.abort();
-  }, [today, wikipediaSectionListApiUrl]);
 
   const setDatePreset = (preset: DatePreset) => {
     const today = new Date();
@@ -386,9 +211,107 @@ export default function DashboardPage() {
     });
   }, [reports, selectedUsers, selectedCustomers]);
 
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const years = new Set(
+      filteredReports
+        .map((report) => report.reportDate)
+        .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        .map((date) => date.slice(0, 4)),
+    );
+
+    if (years.size === 0) {
+      setHolidayDates(new Set());
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchHolidayDates = async () => {
+      const nextHolidayDates = new Set<string>();
+
+      await Promise.all(
+        Array.from(years).map(async (year) => {
+          try {
+            const response = await fetch(`https://holidays-jp.github.io/api/v1/${year}.json`);
+            if (!response.ok) {
+              return;
+            }
+            const holidays = (await response.json()) as Record<string, string>;
+            Object.keys(holidays).forEach((date) => {
+              nextHolidayDates.add(date);
+            });
+          } catch {
+            // 祝日APIの取得に失敗した場合は、平日計算へフォールバックする
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setHolidayDates(nextHolidayDates);
+      }
+    };
+
+    void fetchHolidayDates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredReports]);
+
   const totalHours = useMemo(
     () => filteredReports.reduce((sum: number, r: WorkReport) => sum + r.workHours, 0),
     [filteredReports],
+  );
+
+  // ---------- 残業時間（人ごと・あいうえお順） ----------
+  // 土日祝は7.5h未満でも残業に含め、平日は1日7.5h超過分のみを残業時間として計算する。
+  const isWeekendOrHoliday = (reportDate: string) => {
+    if (!reportDate) return false;
+
+    const date = new Date(`${reportDate}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return false;
+    }
+
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6 || holidayDates.has(reportDate);
+  };
+
+  const overtimeByUser = useMemo(() => {
+    const userDateHours = new Map<string, Map<string, number>>();
+    filteredReports.forEach((report: WorkReport) => {
+      if (!userDateHours.has(report.userName)) {
+        userDateHours.set(report.userName, new Map());
+      }
+      const dateHours = userDateHours.get(report.userName)!;
+      dateHours.set(report.reportDate, (dateHours.get(report.reportDate) || 0) + report.workHours);
+    });
+
+    const kanaCollator = new Intl.Collator("ja");
+    const result: Array<{ user: string; overtimeHours: number }> = [];
+    userDateHours.forEach((dateHours, user) => {
+      let overtimeHours = 0;
+      dateHours.forEach((hours, reportDate) => {
+        if (isWeekendOrHoliday(reportDate)) {
+          overtimeHours += hours;
+          return;
+        }
+
+        if (hours > OVERTIME_DAILY_THRESHOLD_HOURS) {
+          overtimeHours += hours - OVERTIME_DAILY_THRESHOLD_HOURS;
+        }
+      });
+      result.push({ user, overtimeHours });
+    });
+
+    return result.sort((a, b) => kanaCollator.compare(a.user, b.user));
+  }, [filteredReports, holidayDates]);
+
+  const overtimeMaxHours = useMemo(
+    () => overtimeByUser.reduce((max, item) => Math.max(max, item.overtimeHours), 0),
+    [overtimeByUser],
   );
 
   const chartColors = [
@@ -1043,38 +966,38 @@ export default function DashboardPage() {
                       })}
                     </div>
                   </div>
-                  <a
-                    href={wikipediaPageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group block h-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    <Card className="flex h-full flex-col overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-accent/10 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md dark:from-primary/15 dark:via-card dark:to-accent/15">
-                      <CardContent className="flex h-full flex-col space-y-4 pt-0">
-                        <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            {wikipediaDayTitle}
-                          </div>
-                          {wikipediaHighlight && (
-                            <div className="rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                              {wikipediaHighlight}
-                            </div>
-                          )}
+                  <Card className="flex h-full flex-col overflow-hidden">
+                    <CardContent className="flex h-full flex-col space-y-3 pt-0">
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        残業時間（土日祝を含む）
+                      </div>
+                      {overtimeByUser.length === 0 ? (
+                        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                          フィルタ結果にデータがありません
                         </div>
-                        <div className="h-36 overflow-y-auto rounded-xl border border-border/70 bg-muted/40 p-4 shadow-sm">
-                          <div className="mt-2 text-sm leading-6 text-foreground">
-                            {wikipediaLoading
-                              ? "Wikipedia から読み込み中..."
-                              : wikipediaError || wikipediaAiOverview}
-                          </div>
+                      ) : (
+                        <div className="flex-1 space-y-2.5 overflow-y-auto pr-1">
+                          {overtimeByUser.map((item) => {
+                            const widthPercent = overtimeMaxHours > 0 ? (item.overtimeHours / overtimeMaxHours) * 100 : 0;
+                            return (
+                              <div key={item.user} className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-medium text-slate-900 dark:text-slate-100">{item.user}</span>
+                                  <span className="text-muted-foreground">{formatWorkHours(item.overtimeHours)}h</span>
+                                </div>
+                                <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+                                  <div
+                                    className="h-2.5 rounded-full bg-rose-500"
+                                    style={{ width: `${item.overtimeHours > 0 ? Math.max(widthPercent, 2) : 0}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                          <span>クリックで Wikipedia を開く</span>
-                          <ExternalLink className="h-4 w-4" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </a>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             )}
