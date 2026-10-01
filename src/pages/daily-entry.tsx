@@ -977,7 +977,7 @@ export default function DailyEntryPage() {
         displayType: "予定" | "予定内" | "予定外";
         achievement: Achievement;
       }) => (
-        `<p>(${escapeHtml(report.displayType)})【${escapeHtml(report.achievement ?? "―")}】【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
+        `<p>(${escapeHtml(report.displayType)})「${escapeHtml(report.achievement ?? "―")}」【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
         + `${escapeHtml(normalizeInlineText(report.systemName) || "未設定")} `
         + `${escapeHtml(buildWorkSummary(report.workTypeName, report.workDescription) || "（内容未設定）")} `
         + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h</p>`
