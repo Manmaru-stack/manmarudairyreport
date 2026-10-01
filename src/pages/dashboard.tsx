@@ -557,7 +557,7 @@ export default function DashboardPage() {
   };
 
   const downloadCsv = () => {
-    const headers = ["報告日", "ユーザー", "顧客", "システム", "工番", "工番名", "作業内容", "区分", "作業時間"];
+    const headers = ["実績日", "担当者", "顧客", "システム", "工番", "工番名", "作業内容", "区分", "作業時間"];
     const rows = filteredReports.map((report: WorkReport) => [
       report.reportDate,
       report.userName,
