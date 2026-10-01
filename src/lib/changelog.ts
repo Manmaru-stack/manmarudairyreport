@@ -7,6 +7,11 @@ export type ChangelogEntry = {
 // 新しいバージョンをリリースしたら、配列の先頭に追記してください。
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: "1.0.18",
+    date: "2026-10-01",
+    items: ["Teams発報で達成度記号を顧客名の前に表示し、達成度ラベルを省略"],
+  },
+  {
     version: "1.0.17",
     date: "2026-10-01",
     items: ["作業実績CSVのヘッダを「実績日」「担当者」に変更"],

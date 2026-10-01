@@ -964,6 +964,9 @@ export default function DailyEntryPage() {
         const normalizedWorkDescription = normalizeInlineText(workDescription);
         return [normalizedWorkTypeName, normalizedWorkDescription].filter(Boolean).join(" ");
       };
+      // 実績1件をTeams投稿用のHTML段落にする。表示順は「予定内／予定外」「達成度記号」「顧客」「システム・作業内容」「実績時間」。
+      // 達成度が未設定の場合は「―」を表示し、顧客名はマスタの名称を優先して解決する。
+      // SharePoint由来の値はHTMLエスケープしてから埋め込み、投稿本文でのHTML解釈を防ぐ。
       const buildReportPublishLine = (report: {
         customerId: string;
         customerName: string;
@@ -974,10 +977,10 @@ export default function DailyEntryPage() {
         displayType: "予定" | "予定内" | "予定外";
         achievement: Achievement;
       }) => (
-        `<p>(${escapeHtml(report.displayType)})【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
+        `<p>(${escapeHtml(report.displayType)})【${escapeHtml(report.achievement ?? "―")}】【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
         + `${escapeHtml(normalizeInlineText(report.systemName) || "未設定")} `
         + `${escapeHtml(buildWorkSummary(report.workTypeName, report.workDescription) || "（内容未設定）")} `
-        + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h 達成度 ${escapeHtml(report.achievement ?? "―")}</p>`
+        + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h</p>`
       );
       const resolveTeamsCustomerName = (customerId: string, customerName: string) => (
         customerNameMap.get(customerId)
