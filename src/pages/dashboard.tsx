@@ -1022,8 +1022,8 @@ export default function DashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>報告日</TableHead>
-                  <TableHead>ユーザー</TableHead>
+                  <TableHead>実績日</TableHead>
+                  <TableHead>担当者</TableHead>
                   <TableHead>顧客</TableHead>
                   <TableHead>システム</TableHead>
                   <TableHead>工番</TableHead>
