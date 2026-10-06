@@ -7,6 +7,11 @@ export type ChangelogEntry = {
 // 新しいバージョンをリリースしたら、配列の先頭に追記してください。
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: "1.0.19",
+    date: "2026-10-06",
+    items: ["次回の予定モーダルの予定日の初期値を、土日祝を除く次の営業日に変更（参考 日本の祝日API: https://holidays-jp.github.io/ ）"],
+  },
+  {
     version: "1.0.18",
     date: "2026-10-01",
     items: ["Teams発報で達成度記号を顧客名の前に表示し、達成度ラベルを省略"],

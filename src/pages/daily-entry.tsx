@@ -34,6 +34,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { postTeamsChannelMessage } from "@/lib/graphClient";
 import { TEAMS_CONFIG } from "@/lib/sharepointConfig";
 import { formatWorkHours } from "@/lib/utils";
+import { fetchHolidayDatesAround, getNextBusinessDay } from "@/lib/business-day";
 import * as microsoftTeams from "@microsoft/teams-js";
 import { toast } from "sonner";
 import type { Achievement, WorkPlan } from "@/types/sharepoint";
@@ -165,9 +166,9 @@ function emptyReportForm(): ReportFormState {
   };
 }
 
-function emptyPlanForm(): PlanFormState {
+function emptyPlanForm(planDate: string): PlanFormState {
   return {
-    planDate: tomorrow,
+    planDate,
     customerId: "",
     systemId: "",
     workNumberId: "",
@@ -259,6 +260,21 @@ export default function DailyEntryPage() {
   const { data: planItems = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
   const { data: workDayItems = [], isLoading: workDaysLoading, isError: workDaysErrorState, error: workDaysError } = useWorkDays(today, today);
 
+  // 予定日の既定値は、土日祝(祝日API)を除く次の営業日。取得前・失敗時は土日のみ除外する。
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    void fetchHolidayDatesAround(new Date()).then((dates) => {
+      if (!cancelled) {
+        setHolidayDates(dates);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const nextBusinessDay = useMemo(() => getNextBusinessDay(new Date(), holidayDates), [holidayDates]);
+
   const addReportMutation = useAddReport();
   const updateReportMutation = useUpdateReport();
   const deleteReportMutation = useDeleteReport();
@@ -276,7 +292,7 @@ export default function DailyEntryPage() {
   const [planEditingId, setPlanEditingId] = useState<string | null>(null);
   const [workDayId, setWorkDayId] = useState<string | null>(null);
   const [reportForm, setReportForm] = useState<ReportFormState>(emptyReportForm());
-  const [planForm, setPlanForm] = useState<PlanFormState>(emptyPlanForm());
+  const [planForm, setPlanForm] = useState<PlanFormState>(emptyPlanForm(tomorrow));
   const [workDayForm, setWorkDayForm] = useState<WorkDayFormState>(emptyWorkDayForm());
   const [reportSubmitError, setReportSubmitError] = useState("");
   const [planSubmitError, setPlanSubmitError] = useState("");
@@ -713,7 +729,7 @@ export default function DailyEntryPage() {
     setPlanModalOpen(false);
     setPlanEditingId(null);
     setPlanTemplateKey(null);
-    setPlanForm(emptyPlanForm());
+    setPlanForm(emptyPlanForm(nextBusinessDay));
     setPlanSubmitError("");
   };
 
@@ -882,7 +898,7 @@ export default function DailyEntryPage() {
   const openNewPlanModal = () => {
     setPlanEditingId(null);
     setPlanTemplateKey(null);
-    setPlanForm(emptyPlanForm());
+    setPlanForm(emptyPlanForm(nextBusinessDay));
     setPlanSubmitError("");
     setPlanModalOpen(true);
   };
@@ -891,7 +907,7 @@ export default function DailyEntryPage() {
     setPlanEditingId(null);
     setPlanTemplateKey(DEFAULT_NEXT_PLAN_TEMPLATE_KEY);
     setPlanForm({
-      planDate: tomorrow,
+      planDate: nextBusinessDay,
       customerId: defaultNextPlanCandidatePreset.customerId,
       systemId: defaultNextPlanCandidatePreset.systemId,
       workNumberId: "",
@@ -1319,7 +1335,7 @@ export default function DailyEntryPage() {
                 <TableBody>
                   {!isDefaultNextPlanTemplateRegistered && (
                     <TableRow>
-                      <TableCell className="whitespace-nowrap">{tomorrow}</TableCell>
+                      <TableCell className="whitespace-nowrap">{nextBusinessDay}</TableCell>
                       <TableCell className="whitespace-nowrap">社内</TableCell>
                       <TableCell className="whitespace-nowrap">朝会・日報</TableCell>
                       <TableCell className="whitespace-nowrap">―</TableCell>
