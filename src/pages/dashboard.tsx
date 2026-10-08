@@ -600,7 +600,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 min-w-0">
       {pieTooltip && (
         <div
           className="pointer-events-none fixed z-50 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
@@ -629,7 +629,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Card className="mb-6 gap-0 overflow-hidden py-0">
+      <Card className="min-w-0 mb-6 gap-0 overflow-hidden py-0">
         <CardHeader className="px-2 py-1.5">
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm font-medium leading-none">検索条件</div>
@@ -659,7 +659,7 @@ export default function DashboardPage() {
         {filterOpen && (
           <CardContent className="px-2 pb-2 pt-0 text-sm">
             <div className="grid gap-3">
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="space-y-1.5">
                   <div className="font-medium">日付範囲</div>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -703,7 +703,7 @@ export default function DashboardPage() {
                   </label>
                 </div>
               </div>
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="space-y-1.5">
                   <div className="font-medium">ユーザー</div>
                   <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
@@ -754,8 +754,8 @@ export default function DashboardPage() {
         )}
       </Card>
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card className="flex flex-col lg:h-[40rem]">
+      <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card className="min-w-0 flex flex-col lg:h-[40rem]">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>{activePieTitle}</CardTitle>
@@ -856,7 +856,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col lg:h-[40rem]">
+        <Card className="min-w-0 flex flex-col lg:h-[40rem]">
           <CardHeader>
             <CardTitle>システム ユーザー別作業時間</CardTitle>
           </CardHeader>
@@ -944,7 +944,7 @@ export default function DashboardPage() {
                     </span>
                   ))}
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                   <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Top 5</div>
                     <div className="space-y-1.5">
@@ -966,7 +966,7 @@ export default function DashboardPage() {
                       })}
                     </div>
                   </div>
-                  <Card className="flex h-full flex-col overflow-hidden">
+                  <Card className="min-w-0 flex h-full flex-col overflow-hidden">
                     <CardContent className="flex h-full flex-col space-y-3 pt-0">
                       <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         残業時間（土日祝を含む）
@@ -1005,7 +1005,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>フィルタ結果</CardTitle>

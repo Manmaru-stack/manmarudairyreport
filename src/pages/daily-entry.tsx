@@ -196,6 +196,35 @@ function emptyReportForm(): ReportFormState {
   };
 }
 
+const PLAN_DRAFT_STORAGE_KEY = "daily-entry-plan-draft";
+
+function loadPlanDraft(fallbackDate: string): PlanFormState | null {
+  try {
+    const raw = window.localStorage.getItem(PLAN_DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PlanFormState>;
+    return { ...emptyPlanForm(fallbackDate), ...parsed };
+  } catch {
+    return null;
+  }
+}
+
+function savePlanDraft(form: PlanFormState) {
+  try {
+    window.localStorage.setItem(PLAN_DRAFT_STORAGE_KEY, JSON.stringify(form));
+  } catch {
+    // 保存できなくても入力は継続できるようにする
+  }
+}
+
+function clearPlanDraft() {
+  try {
+    window.localStorage.removeItem(PLAN_DRAFT_STORAGE_KEY);
+  } catch {
+    // 無視
+  }
+}
+
 function emptyPlanForm(planDate: string): PlanFormState {
   return {
     planDate,
@@ -331,6 +360,11 @@ export default function DailyEntryPage() {
     }
   }, [reportForm, reportModalOpen, reportEditingId]);
   const [planSubmitError, setPlanSubmitError] = useState("");
+  useEffect(() => {
+    if (planModalOpen && !planEditingId) {
+      savePlanDraft(planForm);
+    }
+  }, [planForm, planModalOpen, planEditingId]);
   const [workDaySubmitError, setWorkDaySubmitError] = useState("");
   const [reportDeleteTargetId, setReportDeleteTargetId] = useState<string | null>(null);
   const [planDeleteTargetId, setPlanDeleteTargetId] = useState<string | null>(null);
@@ -868,6 +902,7 @@ export default function DailyEntryPage() {
       } else {
         await addPlanMutation.mutateAsync(fields);
         toast.success("作業予定を保存しました。", { duration: 2200 });
+        clearPlanDraft();
       }
       closePlanModal();
     } catch (error) {
@@ -937,10 +972,16 @@ export default function DailyEntryPage() {
     setReportModalOpen(true);
   };
 
+  const discardPlanDraft = () => {
+    clearPlanDraft();
+    setPlanForm(emptyPlanForm(nextBusinessDay));
+    setPlanSubmitError("");
+  };
+
   const openNewPlanModal = () => {
     setPlanEditingId(null);
     setPlanTemplateKey(null);
-    setPlanForm(emptyPlanForm(nextBusinessDay));
+    setPlanForm(loadPlanDraft(nextBusinessDay) ?? emptyPlanForm(nextBusinessDay));
     setPlanSubmitError("");
     setPlanModalOpen(true);
   };
@@ -1321,8 +1362,8 @@ export default function DailyEntryPage() {
                               </>
                             ) : (
                               <>
-                                <Button size="sm" onClick={() => openEditReportModal(row)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
-                                  <Pencil className="mr-1 h-4 w-4" />編集
+                                <Button size="sm" onClick={() => openEditReportModal(row)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700" aria-label="編集" title="編集">
+                                  <Pencil className="h-4 w-4" />
                                 </Button>
                                 {row.source === "report" && (
                                   <Button size="sm" variant="destructive" onClick={() => setReportDeleteTargetId(row.sourceId)} disabled={deleteReportMutation.isPending} className="shrink-0">
@@ -1662,20 +1703,23 @@ export default function DailyEntryPage() {
         </div>
       </FloatingFormPanel>
 
-      <FormModal
+      <FloatingFormPanel
         open={planModalOpen}
-        onOpenChange={(open) => {
-          if (!open) closePlanModal();
-        }}
+        onClose={closePlanModal}
         title={planEditingId ? "作業予定を編集" : "作業予定を登録"}
-        description=""
-        onCancel={closePlanModal}
         onSave={() => {
           void savePlan();
         }}
         saveLabel={planEditingId ? "更新" : "登録"}
         isSaving={addPlanMutation.isPending || updatePlanMutation.isPending}
-        maxWidth="full"
+        footerExtra={planEditingId ? undefined : (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">入力内容は自動で一時保存されます</span>
+            <Button variant="ghost" size="sm" onClick={discardPlanDraft} disabled={addPlanMutation.isPending}>
+              下書きを破棄
+            </Button>
+          </div>
+        )}
       >
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-1">
@@ -1765,7 +1809,7 @@ export default function DailyEntryPage() {
           </div>
           {planSubmitError && <p className="text-sm text-destructive">登録できませんでした: {planSubmitError}</p>}
         </div>
-      </FormModal>
+      </FloatingFormPanel>
 
       <FormModal
         open={workDayModalOpen}

@@ -168,14 +168,14 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
         </header>
       )}
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-w-0">
         {/* サイドバー */}
         <Sidebar />
 
         {/* メインコンテンツエリア */}
-        <div className={`flex-1 flex flex-col transition-all duration-300 relative z-0 ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-          <main className="flex-1 flex flex-col overflow-visible">
-            <div className="flex-1 p-6 max-w-full">
+        <div className={`flex-1 min-w-0 flex flex-col transition-all duration-300 relative z-0 ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+          <main className="flex-1 min-w-0 flex flex-col overflow-visible">
+            <div className="flex-1 min-w-0 p-6 max-w-full">
               <Outlet />
             </div>
           </main>

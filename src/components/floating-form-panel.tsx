@@ -2,9 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import { Button } from "@/components/ui/button"
 import { GripHorizontal, X } from "lucide-react"
 
-const POSITION_STORAGE_KEY = "floating-form-panel-position"
 const DEFAULT_PANEL_WIDTH = 560
-const DEFAULT_TOP = 96
 const EDGE_MARGIN = 8
 
 type Position = { x: number; y: number }
@@ -15,28 +13,6 @@ function clampPosition(pos: Position, panelWidth: number): Position {
   return {
     x: Math.min(Math.max(EDGE_MARGIN, pos.x), maxX),
     y: Math.min(Math.max(EDGE_MARGIN, pos.y), maxY),
-  }
-}
-
-function readSavedPosition(): Position | null {
-  try {
-    const raw = window.localStorage.getItem(POSITION_STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as Partial<Position>
-    if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-      return { x: parsed.x, y: parsed.y }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-function saveSavedPosition(pos: Position) {
-  try {
-    window.localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(pos))
-  } catch {
-    // 保存できなくても表示には影響させない
   }
 }
 
@@ -77,10 +53,14 @@ export function FloatingFormPanel({
 
   useEffect(() => {
     if (!open) return
-    const saved = readSavedPosition()
+    // 開くたびに画面中央に表示する
     const width = currentWidth()
+    const height = panelRef.current?.offsetHeight ?? 400
     setPosition(
-      clampPosition(saved ?? { x: window.innerWidth - width - 24, y: DEFAULT_TOP }, width),
+      clampPosition(
+        { x: (window.innerWidth - width) / 2, y: (window.innerHeight - height) / 2 },
+        width,
+      ),
     )
   }, [open])
 
@@ -122,7 +102,6 @@ export function FloatingFormPanel({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
-    if (position) saveSavedPosition(position)
   }
 
   return (
@@ -133,7 +112,9 @@ export function FloatingFormPanel({
       className="fixed z-[45] flex max-h-[80vh] min-w-[320px] flex-col rounded-xl border border-border bg-background shadow-2xl"
       style={{
         width: "min(40vw, calc(100vw - 16px))",
-        ...(position ? { left: position.x, top: position.y } : { right: 24, top: DEFAULT_TOP }),
+        ...(position
+          ? { left: position.x, top: position.y }
+          : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }),
       }}
     >
       <div
