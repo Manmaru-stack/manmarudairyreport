@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/form-modal";
+import { FloatingFormPanel } from "@/components/floating-form-panel";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { Pencil, Plus, Send, Trash2 } from "lucide-react";
@@ -150,6 +151,35 @@ type InlinePlanEditState = {
   isProject: boolean;
   workDescription: string;
 };
+
+const REPORT_DRAFT_STORAGE_KEY = "daily-entry-report-draft";
+
+function loadReportDraft(): ReportFormState | null {
+  try {
+    const raw = window.localStorage.getItem(REPORT_DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ReportFormState>;
+    return { ...emptyReportForm(), ...parsed };
+  } catch {
+    return null;
+  }
+}
+
+function saveReportDraft(form: ReportFormState) {
+  try {
+    window.localStorage.setItem(REPORT_DRAFT_STORAGE_KEY, JSON.stringify(form));
+  } catch {
+    // 保存できなくても入力は継続できるようにする
+  }
+}
+
+function clearReportDraft() {
+  try {
+    window.localStorage.removeItem(REPORT_DRAFT_STORAGE_KEY);
+  } catch {
+    // 無視
+  }
+}
 
 function emptyReportForm(): ReportFormState {
   return {
@@ -295,6 +325,11 @@ export default function DailyEntryPage() {
   const [planForm, setPlanForm] = useState<PlanFormState>(emptyPlanForm(tomorrow));
   const [workDayForm, setWorkDayForm] = useState<WorkDayFormState>(emptyWorkDayForm());
   const [reportSubmitError, setReportSubmitError] = useState("");
+  useEffect(() => {
+    if (reportModalOpen && !reportEditingId) {
+      saveReportDraft(reportForm);
+    }
+  }, [reportForm, reportModalOpen, reportEditingId]);
   const [planSubmitError, setPlanSubmitError] = useState("");
   const [workDaySubmitError, setWorkDaySubmitError] = useState("");
   const [reportDeleteTargetId, setReportDeleteTargetId] = useState<string | null>(null);
@@ -789,6 +824,7 @@ export default function DailyEntryPage() {
       } else {
         await addReportMutation.mutateAsync(fields);
         toast.success("作業実績を保存しました。", { duration: 2200 });
+        clearReportDraft();
       }
       closeReportModal();
     } catch (error) {
@@ -869,9 +905,15 @@ export default function DailyEntryPage() {
     }
   };
 
+  const discardReportDraft = () => {
+    clearReportDraft();
+    setReportForm(emptyReportForm());
+    setReportSubmitError("");
+  };
+
   const openNewReportModal = () => {
     setReportEditingId(null);
-    setReportForm(emptyReportForm());
+    setReportForm(loadReportDraft() ?? emptyReportForm());
     setReportSubmitError("");
     setReportModalOpen(true);
   };
@@ -1168,7 +1210,7 @@ export default function DailyEntryPage() {
                         }}
                         className={!isEditing ? "cursor-pointer" : undefined}
                       >
-                                        <TableCell className="whitespace-nowrap">
+                                        <TableCell className="whitespace-nowrap align-top">
                           <span
                             className={row.source === "report"
                               ? row.displayType === "予定内"
@@ -1179,10 +1221,10 @@ export default function DailyEntryPage() {
                             {row.displayType}
                           </span>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                        <TableCell className="whitespace-nowrap align-top">{isEditing ? (
                           <Input type="date" value={inlineEdit.reportDate} onChange={(e) => setInlineEdit({ ...inlineEdit, reportDate: e.target.value })} className="min-w-[130px]" />
                         ) : row.reportDate}</TableCell>
-                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                        <TableCell className="align-top">{isEditing ? (
                           <Select value={inlineEdit.customerId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, customerId: value, systemId: "", workNumberId: "", isProject: false })}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="顧客" />
@@ -1196,7 +1238,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowCustomerDisplayName(row)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                        <TableCell className="align-top">{isEditing ? (
                           <Select value={inlineEdit.systemId} onValueChange={(value) => setInlineEdit((prev) => prev ? applySystemSelection(prev, value) : prev)} disabled={!inlineEdit.customerId}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="システム" />
@@ -1208,7 +1250,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowSystemDisplayName(row)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                        <TableCell className="align-top">{isEditing ? (
                           <Select
                             value={toLookupSelectValue(inlineEdit.workNumberId)}
                             onValueChange={(value) => {
@@ -1229,7 +1271,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowWorkNumberDisplayName(row)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                        <TableCell className="align-top">{isEditing ? (
                           <Select value={inlineEdit.workTypeId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
                               <SelectValue placeholder="区分" />
@@ -1241,15 +1283,15 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : row.workTypeName}</TableCell>
-                        <TableCell className="max-w-[20rem]">{isEditing ? (
+                        <TableCell className="min-w-[12rem] max-w-[22rem]">{isEditing ? (
                           <Input value={inlineEdit.workDescription} onChange={(e) => setInlineEdit({ ...inlineEdit, workDescription: e.target.value })} />
                         ) : (
-                          <div className="truncate" title={row.workDescription}>{row.workDescription}</div>
+                          <div className="line-clamp-3 whitespace-normal break-words" title={row.workDescription}>{row.workDescription}</div>
                         )}</TableCell>
-                        <TableCell className="text-right whitespace-nowrap">{isEditing ? (
+                        <TableCell className="whitespace-nowrap text-right align-top">{isEditing ? (
                           <Input type="number" min="0" step="0.25" value={inlineEdit.plannedHours} onChange={(e) => setInlineEdit({ ...inlineEdit, plannedHours: e.target.value })} className="w-[90px] ml-auto" />
                         ) : `${formatWorkHours(row.plannedHours)}h`}</TableCell>
-                        <TableCell className="text-right whitespace-nowrap">{isEditing ? (
+                        <TableCell className="whitespace-nowrap text-right align-top">{isEditing ? (
                           <Input type="number" min="0" step="0.25" value={inlineEdit.workTime} onChange={(e) => setInlineEdit({ ...inlineEdit, workTime: e.target.value })} className="w-[90px] ml-auto" />
                         ) : `${formatWorkHours(row.workHours)}h`}</TableCell>
                         <TableCell className="text-center">{isEditing ? (
@@ -1270,8 +1312,8 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : (row.achievement ?? "―")}</TableCell>
-                        <TableCell className="w-[260px]">
-                          <div className="flex items-center gap-2 whitespace-nowrap">
+                        <TableCell className="align-top">
+                          <div className="flex flex-wrap items-center gap-2">
                             {isEditing ? (
                               <>
                                 <Button size="sm" onClick={() => void saveInlineEdit()} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">{row.source === "report" ? "保存" : "登録"}</Button>
@@ -1496,20 +1538,23 @@ export default function DailyEntryPage() {
         </CardContent>
       </Card>
 
-      <FormModal
+      <FloatingFormPanel
         open={reportModalOpen}
-        onOpenChange={(open) => {
-          if (!open) closeReportModal();
-        }}
+        onClose={closeReportModal}
         title={reportEditingId ? "作業実績を編集" : "作業実績を登録"}
-        description=""
-        onCancel={closeReportModal}
         onSave={() => {
           void saveReport();
         }}
         saveLabel={reportEditingId ? "更新" : "登録"}
         isSaving={addReportMutation.isPending || updateReportMutation.isPending}
-        maxWidth="full"
+        footerExtra={reportEditingId ? undefined : (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">入力内容は自動で一時保存されます</span>
+            <Button variant="ghost" size="sm" onClick={discardReportDraft} disabled={addReportMutation.isPending}>
+              下書きを破棄
+            </Button>
+          </div>
+        )}
       >
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-1">
@@ -1615,7 +1660,7 @@ export default function DailyEntryPage() {
           </div>
           {reportSubmitError && <p className="text-sm text-destructive">登録できませんでした: {reportSubmitError}</p>}
         </div>
-      </FormModal>
+      </FloatingFormPanel>
 
       <FormModal
         open={planModalOpen}
