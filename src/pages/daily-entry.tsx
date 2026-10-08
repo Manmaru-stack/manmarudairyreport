@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -198,9 +198,13 @@ function emptyReportForm(): ReportFormState {
 
 const PLAN_DRAFT_STORAGE_KEY = "daily-entry-plan-draft";
 
-function loadPlanDraft(fallbackDate: string): PlanFormState | null {
+function planDraftKey(planId: string | null): string {
+  return planId ? `${PLAN_DRAFT_STORAGE_KEY}:${planId}` : PLAN_DRAFT_STORAGE_KEY;
+}
+
+function loadPlanDraft(fallbackDate: string, planId: string | null = null): PlanFormState | null {
   try {
-    const raw = window.localStorage.getItem(PLAN_DRAFT_STORAGE_KEY);
+    const raw = window.localStorage.getItem(planDraftKey(planId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PlanFormState>;
     return { ...emptyPlanForm(fallbackDate), ...parsed };
@@ -209,17 +213,17 @@ function loadPlanDraft(fallbackDate: string): PlanFormState | null {
   }
 }
 
-function savePlanDraft(form: PlanFormState) {
+function savePlanDraft(form: PlanFormState, planId: string | null = null) {
   try {
-    window.localStorage.setItem(PLAN_DRAFT_STORAGE_KEY, JSON.stringify(form));
+    window.localStorage.setItem(planDraftKey(planId), JSON.stringify(form));
   } catch {
     // 保存できなくても入力は継続できるようにする
   }
 }
 
-function clearPlanDraft() {
+function clearPlanDraft(planId: string | null = null) {
   try {
-    window.localStorage.removeItem(PLAN_DRAFT_STORAGE_KEY);
+    window.localStorage.removeItem(planDraftKey(planId));
   } catch {
     // 無視
   }
@@ -360,9 +364,10 @@ export default function DailyEntryPage() {
     }
   }, [reportForm, reportModalOpen, reportEditingId]);
   const [planSubmitError, setPlanSubmitError] = useState("");
+  const planOriginalFormRef = useRef<PlanFormState | null>(null);
   useEffect(() => {
-    if (planModalOpen && !planEditingId) {
-      savePlanDraft(planForm);
+    if (planModalOpen) {
+      savePlanDraft(planForm, planEditingId);
     }
   }, [planForm, planModalOpen, planEditingId]);
   const [workDaySubmitError, setWorkDaySubmitError] = useState("");
@@ -899,6 +904,7 @@ export default function DailyEntryPage() {
       if (planEditingId) {
         await updatePlanMutation.mutateAsync({ itemId: planEditingId, fields });
         toast.success("作業予定を更新しました。", { duration: 2200 });
+        clearPlanDraft(planEditingId);
       } else {
         await addPlanMutation.mutateAsync(fields);
         toast.success("作業予定を保存しました。", { duration: 2200 });
@@ -973,8 +979,13 @@ export default function DailyEntryPage() {
   };
 
   const discardPlanDraft = () => {
-    clearPlanDraft();
-    setPlanForm(emptyPlanForm(nextBusinessDay));
+    if (planEditingId) {
+      clearPlanDraft(planEditingId);
+      setPlanForm(planOriginalFormRef.current ?? emptyPlanForm(nextBusinessDay));
+    } else {
+      clearPlanDraft();
+      setPlanForm(emptyPlanForm(nextBusinessDay));
+    }
     setPlanSubmitError("");
   };
 
@@ -1004,9 +1015,7 @@ export default function DailyEntryPage() {
   };
 
   const openEditPlanModal = (plan: WorkPlan) => {
-    setPlanEditingId(plan.id);
-    setPlanTemplateKey(extractPlanTemplateKeyFromTitle(plan.title));
-    setPlanForm({
+    const originalForm: PlanFormState = {
       planDate: plan.planDate,
       customerId: plan.customerId,
       systemId: resolveLinkedSystemId(plan.systemId, plan.workNumberId),
@@ -1015,7 +1024,11 @@ export default function DailyEntryPage() {
       workDescription: plan.workDescription,
       plannedHours: String(plan.plannedHours ?? 0),
       isProject: plan.isProject,
-    });
+    };
+    planOriginalFormRef.current = originalForm;
+    setPlanEditingId(plan.id);
+    setPlanTemplateKey(extractPlanTemplateKeyFromTitle(plan.title));
+    setPlanForm(loadPlanDraft(plan.planDate, plan.id) ?? originalForm);
     setPlanSubmitError("");
     setPlanModalOpen(true);
   };
@@ -1428,8 +1441,8 @@ export default function DailyEntryPage() {
                       <TableCell className="max-w-[16rem]">―</TableCell>
                       <TableCell className="w-[220px]">
                         <div className="flex items-center gap-2 whitespace-nowrap">
-                          <Button size="sm" onClick={openDefaultNextPlanCandidateModal} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
-                            <Pencil className="mr-1 h-4 w-4" />編集
+                          <Button size="sm" onClick={openDefaultNextPlanCandidateModal} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700" aria-label="編集" title="編集">
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -1534,8 +1547,8 @@ export default function DailyEntryPage() {
                               </>
                             ) : (
                               <>
-                                <Button size="sm" onClick={() => openEditPlanModal(plan)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
-                                  <Pencil className="mr-1 h-4 w-4" />編集
+                                <Button size="sm" onClick={() => openEditPlanModal(plan)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700" aria-label="編集" title="編集">
+                                  <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button size="sm" variant="destructive" onClick={() => setPlanDeleteTargetId(plan.id)} disabled={deletePlanMutation.isPending} className="shrink-0">
                                   <Trash2 className="h-4 w-4" />
@@ -1712,11 +1725,11 @@ export default function DailyEntryPage() {
         }}
         saveLabel={planEditingId ? "更新" : "登録"}
         isSaving={addPlanMutation.isPending || updatePlanMutation.isPending}
-        footerExtra={planEditingId ? undefined : (
+        footerExtra={(
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">入力内容は自動で一時保存されます</span>
-            <Button variant="ghost" size="sm" onClick={discardPlanDraft} disabled={addPlanMutation.isPending}>
-              下書きを破棄
+            <Button variant="ghost" size="sm" onClick={discardPlanDraft} disabled={addPlanMutation.isPending || updatePlanMutation.isPending}>
+              {planEditingId ? "変更を破棄" : "下書きを破棄"}
             </Button>
           </div>
         )}
