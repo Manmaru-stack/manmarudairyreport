@@ -1,5 +1,5 @@
-// 祝日API: https://holidays-jp.github.io/
-const holidayCache = new Map<number, Promise<string[]>>();
+// 祝日API: https://holidays-jp.github.io/api/v1/date.json
+let holidayDatesPromise: Promise<string[]> | null = null;
 
 export function formatLocalDate(date: Date): string {
   const year = date.getFullYear();
@@ -8,36 +8,36 @@ export function formatLocalDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function fetchHolidaysOfYear(year: number): Promise<string[]> {
-  const cached = holidayCache.get(year);
-  if (cached) {
-    return cached;
+function fetchHolidayDates(): Promise<string[]> {
+  if (holidayDatesPromise) {
+    return holidayDatesPromise;
   }
   const promise = (async () => {
     try {
-      const response = await fetch(`https://holidays-jp.github.io/api/v1/${year}.json`);
+      const response = await fetch("https://holidays-jp.github.io/api/v1/date.json");
       if (!response.ok) {
-        holidayCache.delete(year);
+        holidayDatesPromise = null;
         return [];
       }
       return Object.keys((await response.json()) as Record<string, string>);
     } catch {
       // 取得失敗時は土日のみ除外する計算へフォールバックし、次回再取得できるようにする
-      holidayCache.delete(year);
+      holidayDatesPromise = null;
       return [];
     }
   })();
-  holidayCache.set(year, promise);
+  holidayDatesPromise = promise;
   return promise;
 }
 
-/** 基準日から先 約2週間が属する年の祝日を取得する（年またぎ対応）。 */
+/** 基準日から31日以内の祝日を取得する（年またぎ対応）。 */
 export async function fetchHolidayDatesAround(baseDate: Date): Promise<Set<string>> {
   const end = new Date(baseDate);
-  end.setDate(end.getDate() + 14);
-  const years = Array.from(new Set([baseDate.getFullYear(), end.getFullYear()]));
-  const lists = await Promise.all(years.map(fetchHolidaysOfYear));
-  return new Set(lists.flat());
+  end.setDate(end.getDate() + 31);
+  const startDate = formatLocalDate(baseDate);
+  const endDate = formatLocalDate(end);
+  const dates = await fetchHolidayDates();
+  return new Set(dates.filter((date) => date >= startDate && date <= endDate));
 }
 
 /** 基準日の翌日以降で、土日祝を除く最初の日付(YYYY-MM-DD)を返す。 */

@@ -989,10 +989,14 @@ export default function DailyEntryPage() {
     setPlanSubmitError("");
   };
 
-  const openNewPlanModal = () => {
+  const openNewPlanModal = async () => {
+    const baseDate = new Date();
+    const holidays = await fetchHolidayDatesAround(baseDate);
+    setHolidayDates(holidays);
+    const defaultPlanDate = getNextBusinessDay(baseDate, holidays);
     setPlanEditingId(null);
     setPlanTemplateKey(null);
-    setPlanForm(loadPlanDraft(nextBusinessDay) ?? emptyPlanForm(nextBusinessDay));
+    setPlanForm(loadPlanDraft(defaultPlanDate) ?? emptyPlanForm(defaultPlanDate));
     setPlanSubmitError("");
     setPlanModalOpen(true);
   };
