@@ -1268,7 +1268,7 @@ export default function DailyEntryPage() {
                         }}
                         className={!isEditing ? "cursor-pointer" : undefined}
                       >
-                                        <TableCell className="whitespace-nowrap align-top">
+                        <TableCell className="whitespace-nowrap align-middle">
                           <span
                             className={row.source === "report"
                               ? row.displayType === "予定内"
@@ -1279,10 +1279,10 @@ export default function DailyEntryPage() {
                             {row.displayType}
                           </span>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap align-top">{isEditing ? (
+                        <TableCell className="whitespace-nowrap align-middle">{isEditing ? (
                           <Input type="date" value={inlineEdit.reportDate} onChange={(e) => setInlineEdit({ ...inlineEdit, reportDate: e.target.value })} className="min-w-[130px]" />
                         ) : row.reportDate}</TableCell>
-                        <TableCell className="align-top">{isEditing ? (
+                        <TableCell className="align-middle">{isEditing ? (
                           <Select value={inlineEdit.customerId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, customerId: value, systemId: "", workNumberId: "", isProject: false })}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="顧客" />
@@ -1296,7 +1296,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowCustomerDisplayName(row)}</TableCell>
-                        <TableCell className="align-top">{isEditing ? (
+                        <TableCell className="align-middle">{isEditing ? (
                           <Select value={inlineEdit.systemId} onValueChange={(value) => setInlineEdit((prev) => prev ? applySystemSelection(prev, value) : prev)} disabled={!inlineEdit.customerId}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="システム" />
@@ -1308,7 +1308,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowSystemDisplayName(row)}</TableCell>
-                        <TableCell className="align-top">{isEditing ? (
+                        <TableCell className="align-middle">{isEditing ? (
                           <Select
                             value={toLookupSelectValue(inlineEdit.workNumberId)}
                             onValueChange={(value) => {
@@ -1329,7 +1329,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowWorkNumberDisplayName(row)}</TableCell>
-                        <TableCell className="align-top">{isEditing ? (
+                        <TableCell className="align-middle">{isEditing ? (
                           <Select value={inlineEdit.workTypeId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
                               <SelectValue placeholder="区分" />
@@ -1346,10 +1346,10 @@ export default function DailyEntryPage() {
                         ) : (
                           <div className="line-clamp-3 whitespace-normal break-words" title={row.workDescription}>{row.workDescription}</div>
                         )}</TableCell>
-                        <TableCell className="whitespace-nowrap text-right align-top">{isEditing ? (
+                        <TableCell className="whitespace-nowrap text-right align-middle">{isEditing ? (
                           <Input type="number" min="0" step="0.25" value={inlineEdit.plannedHours} onChange={(e) => setInlineEdit({ ...inlineEdit, plannedHours: e.target.value })} className="w-[90px] ml-auto" />
                         ) : `${formatWorkHours(row.plannedHours)}h`}</TableCell>
-                        <TableCell className="whitespace-nowrap text-right align-top">{isEditing ? (
+                        <TableCell className="whitespace-nowrap text-right align-middle">{isEditing ? (
                           <Input type="number" min="0" step="0.25" value={inlineEdit.workTime} onChange={(e) => setInlineEdit({ ...inlineEdit, workTime: e.target.value })} className="w-[90px] ml-auto" />
                         ) : `${formatWorkHours(row.workHours)}h`}</TableCell>
                         <TableCell className="text-center">{isEditing ? (
@@ -1370,7 +1370,7 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : (row.achievement ?? "―")}</TableCell>
-                        <TableCell className="align-top">
+                        <TableCell className="align-middle">
                           <div className="flex flex-wrap items-center gap-2">
                             {isEditing ? (
                               <>
